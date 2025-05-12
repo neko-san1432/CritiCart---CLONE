@@ -150,6 +150,15 @@ function handleVideoFiles(files) {
     video.src = URL.createObjectURL(videoFile);
 }
 
+// Add missing handler functions
+function handleImageUpload(e) {
+    handleImageFiles(e.target.files);
+}
+
+function handleVideoUpload(e) {
+    handleVideoFiles(e.target.files);
+}
+
 // Handle form submission
 reviewForm.addEventListener('submit', async (e) => {
     e.preventDefault();

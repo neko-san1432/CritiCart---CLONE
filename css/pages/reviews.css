@@ -1,0 +1,168 @@
+/* Reviews Page Styles */
+.reviews-header {
+    padding: 2rem;
+    background-color: var(--bg-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.reviews-header h2 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.filters {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.filters select {
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    min-width: 150px;
+}
+
+.search-container {
+    display: flex;
+    gap: 0.5rem;
+    flex: 1;
+    max-width: 400px;
+}
+
+.search-container input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+.search-btn {
+    padding: 0.5rem 1rem;
+    background-color: var(--primary-color);
+    color: var(--bg-color);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.reviews-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+    padding: 2rem;
+}
+
+.review-card {
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.3s;
+}
+
+.review-card:hover {
+    transform: translateY(-5px);
+}
+
+.review-card img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+.review-content {
+    padding: 1rem;
+}
+
+.review-content h3 {
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.review-meta {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    color: var(--text-color);
+}
+
+.rating {
+    display: flex;
+    gap: 0.25rem;
+    color: var(--primary-color);
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    padding: 2rem;
+}
+
+.pagination button {
+    padding: 0.5rem 1rem;
+    background-color: var(--primary-color);
+    color: var(--bg-color);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filters select,
+    .search-container {
+        width: 100%;
+        max-width: none;
+    }
+
+    .reviews-grid {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+    }
+}
+
+/* Error and No Results States */
+.error,
+.no-reviews {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-color);
+    background: var(--card-bg);
+    border-radius: 8px;
+    margin: 2rem 0;
+}
+
+/* Dark Mode Adjustments */
+.dark-mode .review-card {
+    background: var(--dark-card-bg);
+}
+
+.dark-mode .filter-group select,
+.dark-mode .filter-group input {
+    background: var(--dark-bg);
+    color: var(--text-color);
+    border-color: var(--neon-green);
+}
+
+.dark-mode .review-meta span {
+    background: var(--dark-nav-bg);
+} 

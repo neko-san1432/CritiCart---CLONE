@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review Details - CritiCart</title>
+    <link rel="stylesheet" href="css/components/style.css">
+    <link rel="stylesheet" href="css/pages/review.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-brand">
+                <a href="index.html">CritiCart</a>
+            </div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="reviews.html">Reviews</a>
+                <a href="submit-review.html">Submit Review</a>
+                <a href="admin.html" class="admin-link">Admin</a>
+            </div>
+            <div class="nav-actions">
+                <button id="darkModeToggle" class="dark-mode-toggle">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button id="loginBtn" class="btn btn-login">Login</button>
+                <button id="registerBtn" class="btn btn-register">Register</button>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="review-container">
+            <div class="review-header">
+                <h1 id="productName">Loading...</h1>
+                <div class="review-meta">
+                    <span id="category" class="category">Category</span>
+                    <span id="shopProvider" class="shop">Shop</span>
+                    <span id="reviewDate" class="date">Date</span>
+                </div>
+            </div>
+
+            <div class="review-content">
+                <div class="review-media">
+                    <div id="imageGallery" class="image-gallery">
+                        <!-- Images will be loaded here -->
+                    </div>
+                    <div id="videoContainer" class="video-container">
+                        <!-- Video will be loaded here -->
+                    </div>
+                </div>
+
+                <div class="review-details">
+                    <div class="rating-section">
+                        <h2>Ratings</h2>
+                        <div class="ratings-grid">
+                            <div class="rating-item">
+                                <h3>Price Rating</h3>
+                                <div id="priceRating" class="rating">
+                                    <!-- Stars will be loaded here -->
+                                </div>
+                            </div>
+                            <div class="rating-item">
+                                <h3>Quality Rating</h3>
+                                <div id="qualityRating" class="rating">
+                                    <!-- Stars will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="description-section">
+                        <h2>Description</h2>
+                        <p id="description">Loading...</p>
+                    </div>
+
+                    <div class="tags-section">
+                        <h2>Tags</h2>
+                        <div id="tags" class="tags">
+                            <!-- Tags will be loaded here -->
+                        </div>
+                    </div>
+
+                    <div class="author-section">
+                        <h2>Review Author</h2>
+                        <div id="authorInfo" class="author-info">
+                            <!-- Author info will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="review-actions">
+                <button id="reportBtn" class="btn btn-report">Report Review</button>
+                <button id="shareBtn" class="btn btn-share">Share Review</button>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>CritiCart</h3>
+                <p>Your trusted source for honest product reviews.</p>
+            </div>
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="reviews.html">Reviews</a></li>
+                    <li><a href="submit-review.html">Submit Review</a></li>
+                    <li><a href="about.html">About Us</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Contact</h3>
+                <p>Email: support@criticart.com</p>
+                <p>Phone: (555) 123-4567</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 CritiCart. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Login</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <div id="loginRecaptcha" class="g-recaptcha"></div>
+                <button type="submit" class="btn btn-primary">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Register</h2>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="registerName">Full Name</label>
+                    <input type="text" id="registerName" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">Email</label>
+                    <input type="email" id="registerEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Password</label>
+                    <input type="password" id="registerPassword" required>
+                </div>
+                <div id="registerRecaptcha" class="g-recaptcha"></div>
+                <button type="submit" class="btn btn-primary">Register</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Report Modal -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Report Review</h2>
+            <form id="reportForm">
+                <div class="form-group">
+                    <label for="reportReason">Reason for Report</label>
+                    <select id="reportReason" required>
+                        <option value="">Select a reason</option>
+                        <option value="inappropriate">Inappropriate Content</option>
+                        <option value="fake">Fake Review</option>
+                        <option value="spam">Spam</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="reportDetails">Additional Details</label>
+                    <textarea id="reportDetails" rows="4"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit Report</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <script type="module" src="js/utils/auth.js"></script>
+    <script src="js/pages/review.js"></script>
+</body>
+</html> 

@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CritiCart - Product Reviews</title>
+    <title>Reviews - CritiCart</title>
     <link rel="stylesheet" href="css/components/style.css">
-    <link rel="stylesheet" href="css/pages/main.css">
+    <link rel="stylesheet" href="css/pages/reviews.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -15,8 +15,8 @@
                 <h1>CritiCart</h1>
             </div>
             <div class="nav-links">
-                <a href="index.html" class="active">Home</a>
-                <a href="reviews.html">Reviews</a>
+                <a href="index.html">Home</a>
+                <a href="reviews.html" class="active">Reviews</a>
                 <a href="submit-review.html">Submit Review</a>
                 <button id="darkModeToggle" class="btn dark-mode-btn">
                     <i class="fas fa-moon"></i>
@@ -30,45 +30,42 @@
     </header>
 
     <main>
-        <section class="hero">
-            <div class="hero-content">
-                <h2>Find Honest Product Reviews</h2>
-                <p>Discover real experiences from verified buyers</p>
+        <section class="reviews-header">
+            <h2>All Reviews</h2>
+            <div class="filters">
+                <select id="categoryFilter">
+                    <option value="">All Categories</option>
+                    <option value="Food">Food</option>
+                    <option value="Cosmetics">Cosmetics</option>
+                    <option value="Toys">Toys</option>
+                    <option value="Fashion">Fashion</option>
+                    <option value="Electronics">Electronics</option>
+                    <option value="Home">Home & Living</option>
+                </select>
+                <select id="ratingFilter">
+                    <option value="">All Ratings</option>
+                    <option value="5">5 Stars</option>
+                    <option value="4">4+ Stars</option>
+                    <option value="3">3+ Stars</option>
+                    <option value="2">2+ Stars</option>
+                    <option value="1">1+ Stars</option>
+                </select>
                 <div class="search-container">
-                    <input type="text" id="searchInput" placeholder="Search products...">
+                    <input type="text" id="searchInput" placeholder="Search reviews...">
                     <button class="search-btn"><i class="fas fa-search"></i></button>
                 </div>
             </div>
         </section>
 
-        <section class="featured-reviews">
-            <h2>Featured Reviews</h2>
-            <div class="reviews-grid" id="featuredReviews">
-                <!-- Reviews will be dynamically loaded here -->
-            </div>
+        <section class="reviews-grid" id="reviewsContainer">
+            <!-- Reviews will be dynamically loaded here -->
         </section>
 
-        <section class="categories">
-            <h2>Browse by Category</h2>
-            <div class="category-grid">
-                <div class="category-card">
-                    <i class="fas fa-utensils"></i>
-                    <h3>Food</h3>
-                </div>
-                <div class="category-card">
-                    <i class="fas fa-spa"></i>
-                    <h3>Cosmetics</h3>
-                </div>
-                <div class="category-card">
-                    <i class="fas fa-gamepad"></i>
-                    <h3>Toys</h3>
-                </div>
-                <div class="category-card">
-                    <i class="fas fa-tshirt"></i>
-                    <h3>Fashion</h3>
-                </div>
-            </div>
-        </section>
+        <div class="pagination">
+            <button id="prevPage" class="btn">Previous</button>
+            <span id="pageInfo">Page 1</span>
+            <button id="nextPage" class="btn">Next</button>
+        </div>
     </main>
 
     <footer>
@@ -136,6 +133,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script src="js/utils/supabase.js"></script>
     <script src="js/utils/auth.js"></script>
-    <script src="js/pages/main.js"></script>
+    <script src="js/pages/reviews.js"></script>
 </body>
 </html> 
