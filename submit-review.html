@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit Review - CritiCart</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/submit-review.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="logo">
+                <h1>CritiCart</h1>
+            </div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="reviews.html">Reviews</a>
+                <a href="submit-review.html" class="active">Submit Review</a>
+                <div class="auth-buttons">
+                    <button id="loginBtn" class="btn">Login</button>
+                    <button id="registerBtn" class="btn">Register</button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="submit-review-container">
+        <h2>Submit Your Review</h2>
+        <form id="reviewForm" class="review-form">
+            <div class="form-group">
+                <label for="productName">Product Name *</label>
+                <input type="text" id="productName" required>
+            </div>
+
+            <div class="form-group">
+                <label for="productLink">Product Link *</label>
+                <input type="url" id="productLink" required>
+            </div>
+
+            <div class="form-group">
+                <label for="category">Category *</label>
+                <select id="category" required>
+                    <option value="">Select a category</option>
+                    <option value="Food">Food</option>
+                    <option value="Cosmetics">Cosmetics</option>
+                    <option value="Toys">Toys</option>
+                    <option value="Fashion">Fashion</option>
+                    <option value="Electronics">Electronics</option>
+                    <option value="Home">Home & Living</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="shopProvider">Online Shop Provider *</label>
+                <input type="text" id="shopProvider" required>
+            </div>
+
+            <div class="form-group">
+                <label>Rating *</label>
+                <div class="rating-input">
+                    <div class="rating-category">
+                        <label>Price</label>
+                        <div class="stars" data-rating="price"></div>
+                    </div>
+                    <div class="rating-category">
+                        <label>Quality</label>
+                        <div class="stars" data-rating="quality"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="description">Review Description *</label>
+                <textarea id="description" rows="6" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="tags">Tags (comma-separated)</label>
+                <input type="text" id="tags" placeholder="e.g., affordable, durable, stylish">
+            </div>
+
+            <div class="form-group">
+                <label>Media Upload</label>
+                <div class="media-upload">
+                    <div class="image-upload">
+                        <label>Images (max 5)</label>
+                        <div class="dropzone" id="imageDropzone">
+                            <p>Drag & drop images here or click to upload</p>
+                            <input type="file" multiple accept="image/*" id="imageInput">
+                        </div>
+                        <div class="preview" id="imagePreview"></div>
+                    </div>
+                    <div class="video-upload">
+                        <label>Video (max 1 minute)</label>
+                        <div class="dropzone" id="videoDropzone">
+                            <p>Drag & drop video here or click to upload</p>
+                            <input type="file" accept="video/*" id="videoInput">
+                        </div>
+                        <div class="preview" id="videoPreview"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="submitRecaptcha" class="recaptcha-container"></div>
+
+            <button type="submit" class="btn submit-btn">Submit Review</button>
+        </form>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>About CritiCart</h3>
+                <p>Your trusted source for honest product reviews</p>
+            </div>
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <a href="about.html">About Us</a>
+                <a href="contact.html">Contact</a>
+                <a href="privacy.html">Privacy Policy</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 CritiCart. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <script src="js/auth.js"></script>
+    <script src="js/submit-review.js"></script>
+</body>
+</html> 
