@@ -1,9 +1,9 @@
 // Supabase configuration
-const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_URL = 'https://dgualcjfvzjrqzwwmvov.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRndWFsY2pmdnpqcnF6d3dtdm92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYwMzAxODIsImV4cCI6MjA2MTYwNjE4Mn0.R-gNusHP_Va683Xf1mhgdUH4NO5udxSkaUtstQwUS_A';
 
-// Initialize Supabase client
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Initialize Supabase client only once
+const supabase = window.supabase || supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Database utility functions
 const db = {
@@ -192,5 +192,6 @@ const db = {
 };
 
 // Export utilities
+db.supabase = supabase;
 window.db = db;
 window.supabase = supabase; 

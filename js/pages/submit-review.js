@@ -8,13 +8,13 @@ const imagePreview = document.getElementById('imagePreview');
 const videoPreview = document.getElementById('videoPreview');
 
 // reCAPTCHA configuration
-const RECAPTCHA_SITE_KEY = 'YOUR_RECAPTCHA_SITE_KEY';
+const SUBMIT_RECAPTCHA_SITE_KEY = 'YOUR_RECAPTCHA_SITE_KEY';
 let submitRecaptchaInstance = null;
 
 // Initialize reCAPTCHA
 function initRecaptcha() {
     submitRecaptchaInstance = grecaptcha.render('submitRecaptcha', {
-        'sitekey': RECAPTCHA_SITE_KEY,
+        'sitekey': SUBMIT_RECAPTCHA_SITE_KEY,
         'callback': onRecaptchaSuccess,
         'expired-callback': onRecaptchaExpired
     });
