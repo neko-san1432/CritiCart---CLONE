@@ -1,187 +1,330 @@
-// Dark mode functionality
-const darkModeToggle = document.getElementById('darkModeToggle');
-const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
-
-// Check for saved theme preference or use system preference
-const currentTheme = localStorage.getItem('theme') || 
-    (prefersDarkScheme.matches ? 'dark' : 'light');
-
-// Set initial theme
-document.documentElement.setAttribute('data-theme', currentTheme);
-updateDarkModeIcon(currentTheme);
-
-// Toggle theme
-darkModeToggle.addEventListener('click', () => {
-    const newTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
-    updateDarkModeIcon(newTheme);
-});
-
-// Update dark mode icon
-function updateDarkModeIcon(theme) {
-    const icon = darkModeToggle.querySelector('i');
-    if (theme === 'dark') {
-        icon.className = 'fas fa-sun';
-    } else {
-        icon.className = 'fas fa-moon';
-    }
-}
+import { auth } from '../utils/auth.js';
+import { db, DatabaseError } from '../utils/supabase.js';
 
 // DOM Elements
-const searchInput = document.getElementById('searchInput');
-const searchBtn = document.querySelector('.search-btn');
-const featuredReviews = document.getElementById('featuredReviews');
+const elements = {
+    darkModeToggle: document.getElementById('darkModeToggle'),
+    searchInput: document.getElementById('searchInput'),
+    featuredReviews: document.getElementById('featuredReviews'),
+    loginBtn: document.getElementById('loginBtn'),
+    registerBtn: document.getElementById('registerBtn'),
+    loginModal: document.getElementById('loginModal'),
+    registerModal: document.getElementById('registerModal'),
+    searchBtn: document.querySelector('.search-btn'),
+    categoryCards: document.querySelectorAll('.category-card')
+};
 
-// Main page functionality
-const mainPage = {
-    // Initialize main page
-    init() {
-        this.loadFeaturedReviews();
-        this.setupCategoryClicks();
-        this.setupSearch();
-    },
+// State management
+const state = {
+    isDarkMode: localStorage.getItem('darkMode') === 'true',
+    searchTimeout: null,
+    currentPage: 1,
+    isLoading: false
+};
 
-    // Load featured reviews
-    async loadFeaturedReviews() {
-        const grid = document.getElementById('featuredReviews');
-        if (!grid) return;
-        grid.innerHTML = '<p>Loading...</p>';
-        try {
-            // Fetch featured reviews (example: reviews with featured: true or top 6 approved)
-            const { data: reviews, error } = await supabase
-                .from('reviews')
-                .select('*, users(full_name, avatar_url)')
-                .eq('status', 'approved')
-                .order('created_at', { ascending: false })
-                .limit(6);
-            if (error) throw error;
-            if (!reviews || reviews.length === 0) {
-                grid.innerHTML = '<p>No featured reviews yet.</p>';
-                return;
-            }
-            grid.innerHTML = reviews.map(this.createReviewCard).join('');
-        } catch (err) {
-            grid.innerHTML = '<p class="error">Failed to load featured reviews.</p>';
-        }
-    },
-
-    // Create review card HTML
-    createReviewCard(review) {
-        return `
-            <div class="review-card" data-id="${review.id}">
-                <div class="review-image">
-                    <img src="${(review.images && review.images[0]) || 'assets/images/placeholder.jpg'}" alt="${review.product_name || review.title}">
-                </div>
-                <div class="review-content">
-                    <h3>${review.product_name || review.title}</h3>
-                    <div class="review-meta">
-                        <span class="category">${review.category || ''}</span>
-                        <span class="rating">${this.createStarRating(review.rating || 0)}</span>
-                    </div>
-                    <p>${this.truncateText(review.description || '', 100)}</p>
-                    <div class="review-footer">
-                        <div class="author">
-                            <img src="${(review.users && review.users.avatar_url) || 'assets/icons/default-avatar.png'}" alt="${(review.users && review.users.full_name) || 'User'}" class="author-avatar">
-                            <span class="author-name">${(review.users && review.users.full_name) || 'User'}</span>
-                        </div>
-                        <a href="review.html?id=${review.id}" class="btn-read-more">Read More</a>
-                    </div>
-                </div>
-            </div>
-        `;
-    },
-
-    // Create star rating HTML
-    createStarRating(rating) {
-        const fullStars = Math.floor(rating);
-        const halfStar = rating % 1 >= 0.5;
-        const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
-        return `
-            <span class="stars">
-                ${'★'.repeat(fullStars)}${halfStar ? '½' : ''}${'☆'.repeat(emptyStars)}
-                <span class="rating-value">${rating.toFixed(1)}</span>
-            </span>
-        `;
-    },
-
-    // Truncate text with ellipsis
-    truncateText(text, maxLength) {
-        if (!text) return '';
-        if (text.length <= maxLength) return text;
-        return text.slice(0, maxLength) + '...';
-    },
-
-    // Setup event listeners
-    setupCategoryClicks() {
-        document.querySelectorAll('.category-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const category = card.querySelector('h3').textContent;
-                window.location.href = `reviews.html?category=${encodeURIComponent(category)}`;
-            });
-        });
-    },
-
-    setupSearch() {
-        if (searchBtn && searchInput) {
-            searchBtn.addEventListener('click', () => {
-                const query = searchInput.value.trim();
-                if (query) {
-                    window.location.href = `reviews.html?search=${encodeURIComponent(query)}`;
-                }
-            });
-            searchInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    searchBtn.click();
-                }
-            });
-        }
+// Initialize dark mode
+const initDarkMode = () => {
+    if (state.isDarkMode) {
+        document.body.classList.add('dark-mode');
+        elements.darkModeToggle.innerHTML = '<i class="fas fa-sun"></i>';
     }
 };
 
-// Initialize main page when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    mainPage.init();
-});
+// Toggle dark mode with animation
+const toggleDarkMode = () => {
+    document.body.classList.toggle('dark-mode');
+    state.isDarkMode = document.body.classList.contains('dark-mode');
+    localStorage.setItem('darkMode', state.isDarkMode);
+    
+    // Animate icon transition
+    const icon = elements.darkModeToggle.querySelector('i');
+    icon.style.transform = 'rotate(360deg)';
+    icon.style.transition = 'transform 0.5s ease';
+    
+    setTimeout(() => {
+        icon.innerHTML = state.isDarkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        icon.style.transform = 'rotate(0deg)';
+    }, 250);
+};
 
-// Search functionality
-searchBtn.addEventListener('click', async () => {
-    const searchTerm = searchInput.value.trim();
-    if (!searchTerm) return;
+// Debounced search with loading state
+const handleSearch = async (e) => {
+    const query = e.target.value.trim();
+    
+    // Clear previous timeout
+    if (state.searchTimeout) {
+        clearTimeout(state.searchTimeout);
+    }
+
+    // Show loading state
+    if (query.length >= 2) {
+        elements.featuredReviews.innerHTML = '<div class="loading">Searching...</div>';
+        state.isLoading = true;
+    }
+
+    // Debounce search
+    state.searchTimeout = setTimeout(async () => {
+        if (query.length < 2) {
+            await loadFeaturedReviews();
+            return;
+        }
+
+        try {
+            const { reviews } = await db.getReviews({ search: query });
+            updateSearchResults(reviews);
+        } catch (error) {
+            handleError(error);
+        } finally {
+            state.isLoading = false;
+        }
+    }, 300);
+};
+
+// Update search results with animation
+const updateSearchResults = (reviews) => {
+    if (!elements.featuredReviews) return;
+
+    if (reviews.length === 0) {
+        elements.featuredReviews.innerHTML = '<div class="no-results">No reviews found</div>';
+        return;
+    }
+
+    const html = reviews.map(review => `
+        <div class="review-card" data-aos="fade-up">
+            <img src="${review.image_url || 'assets/images/placeholder.jpg'}" alt="${review.title}">
+            <h3>${review.title}</h3>
+            <p>${review.summary}</p>
+            <div class="review-meta">
+                <span class="rating">${review.rating}/5</span>
+                <span class="author">${review.author_name}</span>
+            </div>
+        </div>
+    `).join('');
+
+    elements.featuredReviews.innerHTML = html;
+};
+
+// Load featured reviews with error handling
+const loadFeaturedReviews = async () => {
+    if (!elements.featuredReviews) return;
 
     try {
-        const { data: reviews, error } = await supabase
-            .from('reviews')
-            .select('*')
-            .or(`product_name.ilike.%${searchTerm}%,tags.cs.{${searchTerm}}`)
-            .eq('status', 'approved');
-
-        if (error) throw error;
-
-        displayReviews(reviews);
+        elements.featuredReviews.innerHTML = '<div class="loading">Loading reviews...</div>';
+        const { reviews } = await db.getReviews({ featured: true });
+        updateFeaturedReviews(reviews);
     } catch (error) {
-        console.error('Error searching reviews:', error);
+        handleError(error);
     }
-});
+};
 
-// Category click handling
-document.querySelectorAll('.category-card').forEach(card => {
-    card.addEventListener('click', async () => {
-        const category = card.querySelector('h3').textContent;
-        
+// Update featured reviews with animation
+const updateFeaturedReviews = (reviews) => {
+    if (!elements.featuredReviews) return;
+    
+    if (reviews.length === 0) {
+        elements.featuredReviews.innerHTML = '<div class="no-results">No featured reviews yet</div>';
+        return;
+    }
+
+    const html = reviews.map((review, index) => `
+        <div class="review-card" data-aos="fade-up" data-aos-delay="${index * 100}">
+            <img src="${review.image_url || 'assets/images/placeholder.jpg'}" alt="${review.title}">
+            <h3>${review.title}</h3>
+            <p>${review.summary}</p>
+            <div class="review-meta">
+                <span class="rating">${review.rating}/5</span>
+                <span class="author">${review.author_name}</span>
+            </div>
+        </div>
+    `).join('');
+
+    elements.featuredReviews.innerHTML = html;
+};
+
+// Modal handling with animations
+const setupModals = () => {
+    const modals = {
+        login: elements.loginModal,
+        register: elements.registerModal
+    };
+
+    // Open modal with animation
+    const openModal = (type) => {
+        const modal = modals[type];
+        if (!modal) return;
+
+        modal.style.display = 'block';
+        modal.classList.add('fade-in');
+    };
+
+    // Close modal with animation
+    const closeModal = (type) => {
+        const modal = modals[type];
+        if (!modal) return;
+
+        modal.classList.add('fade-out');
+        setTimeout(() => {
+            modal.style.display = 'none';
+            modal.classList.remove('fade-out');
+        }, 300);
+    };
+
+    // Setup modal triggers
+    elements.loginBtn?.addEventListener('click', () => openModal('login'));
+    elements.registerBtn?.addEventListener('click', () => openModal('register'));
+
+    // Close buttons
+    document.querySelectorAll('.close').forEach(btn => {
+        btn.addEventListener('click', () => {
+            closeModal('login');
+            closeModal('register');
+        });
+    });
+
+    // Close on outside click
+    window.addEventListener('click', (e) => {
+        if (e.target === modals.login) closeModal('login');
+        if (e.target === modals.register) closeModal('register');
+    });
+};
+
+// Form handling with validation
+const setupForms = () => {
+    const forms = {
+        login: document.getElementById('loginForm'),
+        register: document.getElementById('registerForm')
+    };
+
+    // Form validation
+    const validateForm = (form) => {
+        const inputs = form.querySelectorAll('input[required]');
+        let isValid = true;
+
+        inputs.forEach(input => {
+            if (!input.value.trim()) {
+                input.classList.add('error');
+                isValid = false;
+            } else {
+                input.classList.remove('error');
+            }
+        });
+
+        return isValid;
+    };
+
+    // Login form
+    forms.login?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!validateForm(forms.login)) return;
+
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+
         try {
-            const { data: reviews, error } = await supabase
-                .from('reviews')
-                .select('*')
-                .eq('category', category)
-                .eq('status', 'approved');
-
-            if (error) throw error;
-
-            displayReviews(reviews);
+            const result = await auth.login(email, password);
+            if (result.success) {
+                closeModal('login');
+                showNotification('Successfully logged in!', 'success');
+            } else {
+                showNotification(result.error, 'error');
+            }
         } catch (error) {
-            console.error('Error loading category reviews:', error);
+            handleError(error);
         }
     });
-}); 
+
+    // Register form
+    forms.register?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!validateForm(forms.register)) return;
+
+        const name = document.getElementById('registerName').value;
+        const email = document.getElementById('registerEmail').value;
+        const password = document.getElementById('registerPassword').value;
+
+        try {
+            const result = await auth.register(email, password, name);
+            if (result.success) {
+                closeModal('register');
+                showNotification('Registration successful!', 'success');
+            } else {
+                showNotification(result.error, 'error');
+            }
+        } catch (error) {
+            handleError(error);
+        }
+    });
+};
+
+// Error handling
+const handleError = (error) => {
+    console.error('Application error:', error);
+    
+    let message = 'An unexpected error occurred';
+    if (error instanceof DatabaseError) {
+        message = error.message;
+    } else if (error instanceof Error) {
+        message = error.message;
+    }
+
+    showNotification(message, 'error');
+};
+
+// Notification system with types
+const showNotification = (message, type = 'info') => {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <i class="fas ${getNotificationIcon(type)}"></i>
+        <span>${message}</span>
+    `;
+
+    document.body.appendChild(notification);
+    
+    // Animate in
+    requestAnimationFrame(() => {
+        notification.style.transform = 'translateY(0)';
+        notification.style.opacity = '1';
+    });
+
+    // Remove after delay
+    setTimeout(() => {
+        notification.style.transform = 'translateY(-100%)';
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+};
+
+// Get notification icon based on type
+const getNotificationIcon = (type) => {
+    switch (type) {
+        case 'success': return 'fa-check-circle';
+        case 'error': return 'fa-exclamation-circle';
+        case 'warning': return 'fa-exclamation-triangle';
+        default: return 'fa-info-circle';
+    }
+};
+
+// Initialize application
+const init = () => {
+    initDarkMode();
+    setupModals();
+    setupForms();
+    loadFeaturedReviews();
+
+    // Event listeners
+    elements.darkModeToggle?.addEventListener('click', toggleDarkMode);
+    elements.searchInput?.addEventListener('input', handleSearch);
+    elements.searchBtn?.addEventListener('click', () => elements.searchInput?.focus());
+
+    // Category click handling
+    elements.categoryCards?.forEach(card => {
+        card.addEventListener('click', () => {
+            const category = card.querySelector('h3').textContent;
+            window.location.href = `reviews.html?category=${encodeURIComponent(category)}`;
+        });
+    });
+};
+
+// Start application when DOM is loaded
+document.addEventListener('DOMContentLoaded', init); 

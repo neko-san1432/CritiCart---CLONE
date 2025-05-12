@@ -1,3 +1,6 @@
+import { supabase } from './supabase.js';
+import config from './config.js';
+
 // reCAPTCHA configuration
 const RECAPTCHA_SITE_KEY = '6Ld36wkrAAAAAPzVNRDG5ghTy_ZhhjyhZJY2lelr';
 
@@ -28,224 +31,245 @@ window.addEventListener('DOMContentLoaded', () => {
     // Place any other modal-related logic here if needed
 });
 
-let loginRecaptchaInstance = null;
-let registerRecaptchaInstance = null;
+class AuthError extends Error {
+    constructor(message, code) {
+        super(message);
+        this.name = 'AuthError';
+        this.code = code;
+    }
+}
 
-// Authentication utility functions
-const auth = {
-    // Initialize auth state
-    init() {
-        this.checkAuthState();
-        this.setupAuthListeners();
-    },
+class Auth {
+    constructor() {
+        this.user = null;
+        this.session = null;
+        this.recaptchaInstances = new Map();
+        this.init();
+    }
 
-    // Check if user is authenticated
-    checkAuthState() {
-        const user = localStorage.getItem('user');
-        if (user) {
-            this.updateUIForAuth(JSON.parse(user));
-        } else {
-            this.updateUIForGuest();
-        }
-    },
-
-    // Setup authentication event listeners
-    setupAuthListeners() {
-        // Login form submission
-        const loginForm = document.getElementById('loginForm');
-        if (loginForm) {
-            loginForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleLogin(e.target);
-            });
-        }
-
-        // Register form submission
-        const registerForm = document.getElementById('registerForm');
-        if (registerForm) {
-            registerForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleRegister(e.target);
-            });
-        }
-
-        // Logout button
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => {
-                this.handleLogout();
-            });
-        }
-    },
-
-    // Handle login form submission
-    async handleLogin(form) {
-        const email = form.email.value;
-        const password = form.password.value;
-
+    async init() {
         try {
+            // Check for existing session
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                this.session = session;
+                this.user = session.user;
+                this.updateUI();
+            }
+
+            // Listen for auth changes
+            supabase.auth.onAuthStateChange((event, session) => {
+                this.handleAuthChange(event, session);
+            });
+
+            // Initialize reCAPTCHA
+            this.initRecaptcha();
+        } catch (error) {
+            console.error('Auth initialization error:', error);
+            this.showNotification('Authentication system error', 'error');
+        }
+    }
+
+    handleAuthChange(event, session) {
+        switch (event) {
+            case 'SIGNED_IN':
+                this.session = session;
+                this.user = session.user;
+                this.updateUI();
+                this.showNotification('Successfully signed in!', 'success');
+                break;
+            case 'SIGNED_OUT':
+                this.session = null;
+                this.user = null;
+                this.updateUI();
+                this.showNotification('Successfully signed out!', 'info');
+                break;
+            case 'TOKEN_REFRESHED':
+                this.session = session;
+                this.showNotification('Session refreshed', 'info');
+                break;
+            case 'USER_UPDATED':
+                this.user = session.user;
+                this.updateUI();
+                break;
+        }
+    }
+
+    async login(email, password) {
+        try {
+            const recaptchaToken = await this.getRecaptchaToken('login');
+            if (!recaptchaToken) {
+                throw new AuthError('Please complete the reCAPTCHA verification', 'RECAPTCHA_REQUIRED');
+            }
+
             const { data, error } = await supabase.auth.signInWithPassword({
                 email,
                 password
             });
 
             if (error) throw error;
-
-            // Store user data
-            localStorage.setItem('user', JSON.stringify(data.user));
-            this.updateUIForAuth(data.user);
-
-            // Close modal and show success message
-            this.closeAuthModal();
-            this.showNotification('Successfully logged in!', 'success');
-
+            return { success: true, data };
         } catch (error) {
-            this.showNotification(error.message, 'error');
+            console.error('Login error:', error);
+            return { 
+                success: false, 
+                error: error instanceof AuthError ? error.message : 'Invalid email or password'
+            };
         }
-    },
+    }
 
-    // Handle registration form submission
-    async handleRegister(form) {
-        const email = form.email.value;
-        const password = form.password.value;
-        const username = form.username.value;
-
+    async register(email, password, fullName) {
         try {
+            const recaptchaToken = await this.getRecaptchaToken('register');
+            if (!recaptchaToken) {
+                throw new AuthError('Please complete the reCAPTCHA verification', 'RECAPTCHA_REQUIRED');
+            }
+
             const { data, error } = await supabase.auth.signUp({
                 email,
                 password,
                 options: {
                     data: {
-                        username
-                    }
+                        full_name: fullName
+                    },
+                    emailRedirectTo: `${window.location.origin}/auth/callback`
                 }
             });
 
             if (error) throw error;
-
-            // Store user data
-            localStorage.setItem('user', JSON.stringify(data.user));
-            this.updateUIForAuth(data.user);
-
-            // Close modal and show success message
-            this.closeAuthModal();
-            this.showNotification('Registration successful!', 'success');
-
+            return { success: true, data };
         } catch (error) {
-            this.showNotification(error.message, 'error');
+            console.error('Registration error:', error);
+            return { 
+                success: false, 
+                error: error instanceof AuthError ? error.message : 'Registration failed'
+            };
         }
-    },
+    }
 
-    // Handle logout
-    async handleLogout() {
+    async logout() {
         try {
             const { error } = await supabase.auth.signOut();
             if (error) throw error;
-
-            // Clear user data
-            localStorage.removeItem('user');
-            this.updateUIForGuest();
-
-            // Show success message
-            this.showNotification('Successfully logged out!', 'success');
-
+            return { success: true };
         } catch (error) {
-            this.showNotification(error.message, 'error');
+            console.error('Logout error:', error);
+            return { success: false, error: 'Failed to sign out' };
         }
-    },
+    }
 
-    // Update UI for authenticated user
-    updateUIForAuth(user) {
-        // Update navigation
-        const authLinks = document.querySelectorAll('.auth-link');
-        authLinks.forEach(link => {
-            if (link.classList.contains('guest-only')) {
-                link.style.display = 'none';
-            } else if (link.classList.contains('auth-only')) {
-                link.style.display = 'block';
-            }
-        });
+    async resetPassword(email) {
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/auth/reset-password`
+            });
+            if (error) throw error;
+            return { success: true };
+        } catch (error) {
+            console.error('Password reset error:', error);
+            return { success: false, error: 'Failed to send reset email' };
+        }
+    }
 
-        // Update user info
-        const usernameElements = document.querySelectorAll('.username');
-        usernameElements.forEach(element => {
-            element.textContent = user.user_metadata.username || user.email;
-        });
+    updateUI() {
+        const authButtons = document.querySelector('.auth-buttons');
+        if (!authButtons) return;
 
-        // Update avatar
-        const avatarElements = document.querySelectorAll('.user-avatar');
-        avatarElements.forEach(element => {
-            element.src = user.user_metadata.avatar_url || 'assets/icons/default-avatar.png';
-        });
-    },
+        if (this.user) {
+            const userName = this.user.user_metadata.full_name || this.user.email;
+            authButtons.innerHTML = `
+                <div class="user-menu">
+                    <button class="user-menu-btn">
+                        <span class="user-name">${userName}</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="user-dropdown">
+                        <a href="/profile">Profile</a>
+                        <a href="/settings">Settings</a>
+                        <button id="logoutBtn" class="btn">Logout</button>
+                    </div>
+                </div>
+            `;
 
-    // Update UI for guest user
-    updateUIForGuest() {
-        // Update navigation
-        const authLinks = document.querySelectorAll('.auth-only');
-        authLinks.forEach(link => {
-            link.style.display = 'none';
-        });
+            // Setup user menu
+            const menuBtn = authButtons.querySelector('.user-menu-btn');
+            const dropdown = authButtons.querySelector('.user-dropdown');
+            menuBtn?.addEventListener('click', () => {
+                dropdown.classList.toggle('show');
+            });
 
-        // Clear user info
-        const usernameElements = document.querySelectorAll('.username');
-        usernameElements.forEach(element => {
-            element.textContent = '';
-        });
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!menuBtn?.contains(e.target)) {
+                    dropdown?.classList.remove('show');
+                }
+            });
 
-        // Reset avatar
-        const avatarElements = document.querySelectorAll('.user-avatar');
-        avatarElements.forEach(element => {
-            element.src = 'assets/icons/default-avatar.png';
-        });
-    },
-
-    // Show authentication modal
-    showAuthModal(type = 'login') {
-        const modal = document.getElementById('authModal');
-        if (!modal) return;
-
-        // Update modal content based on type
-        const loginForm = document.getElementById('loginForm');
-        const registerForm = document.getElementById('registerForm');
-        const modalTitle = modal.querySelector('.modal-title');
-
-        if (type === 'login') {
-            loginForm.style.display = 'block';
-            registerForm.style.display = 'none';
-            modalTitle.textContent = 'Login';
+            // Setup logout
+            document.getElementById('logoutBtn')?.addEventListener('click', () => this.logout());
         } else {
-            loginForm.style.display = 'none';
-            registerForm.style.display = 'block';
-            modalTitle.textContent = 'Register';
+            authButtons.innerHTML = `
+                <button id="loginBtn" class="btn">Login</button>
+                <button id="registerBtn" class="btn">Register</button>
+            `;
+        }
+    }
+
+    initRecaptcha() {
+        if (typeof grecaptcha === 'undefined') {
+            console.warn('reCAPTCHA not loaded');
+            return;
         }
 
-        // Show modal
-        modal.style.display = 'flex';
-    },
+        ['login', 'register'].forEach(type => {
+            const container = document.getElementById(`${type}Recaptcha`);
+            if (!container) return;
 
-    // Close authentication modal
-    closeAuthModal() {
-        const modal = document.getElementById('authModal');
-        if (!modal) return;
+            this.recaptchaInstances.set(type, grecaptcha.render(container, {
+                sitekey: config.recaptcha.siteKey,
+                callback: (token) => this.handleRecaptchaSuccess(type, token),
+                'expired-callback': () => this.handleRecaptchaExpired(type)
+            }));
+        });
+    }
 
-        modal.style.display = 'none';
-    },
+    async getRecaptchaToken(type) {
+        const instance = this.recaptchaInstances.get(type);
+        if (!instance) return null;
 
-    // Show notification
+        try {
+            return await grecaptcha.execute(instance);
+        } catch (error) {
+            console.error('reCAPTCHA error:', error);
+            return null;
+        }
+    }
+
+    handleRecaptchaSuccess(type, token) {
+        const form = document.getElementById(`${type}Form`);
+        if (form) {
+            form.dataset.recaptchaToken = token;
+        }
+    }
+
+    handleRecaptchaExpired(type) {
+        const form = document.getElementById(`${type}Form`);
+        if (form) {
+            form.dataset.recaptchaToken = '';
+        }
+    }
+
     showNotification(message, type = 'info') {
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
         notification.textContent = message;
 
         document.body.appendChild(notification);
-
-        // Remove notification after 3 seconds
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
+        setTimeout(() => notification.remove(), 3000);
     }
-};
+}
+
+export const auth = new Auth();
 
 // Initialize reCAPTCHA
 function initRecaptcha() {
