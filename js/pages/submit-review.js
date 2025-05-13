@@ -1,32 +1,58 @@
+import { auth } from '../utils/auth.js';
+import { db } from '../utils/supabase.js';
+import config from '../utils/config.js';
+
 // DOM Elements
-const reviewForm = document.getElementById('reviewForm');
-const imageDropzone = document.getElementById('imageDropzone');
-const videoDropzone = document.getElementById('videoDropzone');
-const imageInput = document.getElementById('imageInput');
-const videoInput = document.getElementById('videoInput');
-const imagePreview = document.getElementById('imagePreview');
-const videoPreview = document.getElementById('videoPreview');
+const elements = {
+    reviewForm: document.getElementById('reviewForm'),
+    productName: document.getElementById('productName'),
+    productLink: document.getElementById('productLink'),
+    category: document.getElementById('category'),
+    shopProvider: document.getElementById('shopProvider'),
+    description: document.getElementById('description'),
+    tags: document.getElementById('tags'),
+    imageInput: document.getElementById('imageInput'),
+    videoInput: document.getElementById('videoInput'),
+    imagePreview: document.getElementById('imagePreview'),
+    videoPreview: document.getElementById('videoPreview')
+};
 
 // reCAPTCHA configuration
-const SUBMIT_RECAPTCHA_SITE_KEY = 'YOUR_RECAPTCHA_SITE_KEY';
 let submitRecaptchaInstance = null;
 
 // Initialize reCAPTCHA
 function initRecaptcha() {
-    submitRecaptchaInstance = grecaptcha.render('submitRecaptcha', {
-        'sitekey': SUBMIT_RECAPTCHA_SITE_KEY,
-        'callback': onRecaptchaSuccess,
-        'expired-callback': onRecaptchaExpired
-    });
+    if (typeof grecaptcha === 'undefined') {
+        console.warn('reCAPTCHA not loaded');
+        return;
+    }
+
+    const submitRecaptchaContainer = document.getElementById('submitRecaptcha');
+    if (!submitRecaptchaContainer) {
+        console.warn('reCAPTCHA container not found');
+        return;
+    }
+
+    try {
+        submitRecaptchaInstance = grecaptcha.render('submitRecaptcha', {
+            'sitekey': config.recaptcha.siteKey,
+            'callback': onRecaptchaSuccess,
+            'expired-callback': onRecaptchaExpired
+        });
+    } catch (error) {
+        if (!error.message.includes('reCAPTCHA has already been rendered')) {
+            console.error('Error initializing reCAPTCHA:', error);
+        }
+    }
 }
 
 // reCAPTCHA callbacks
 function onRecaptchaSuccess(token) {
-    reviewForm.dataset.recaptchaToken = token;
+    elements.reviewForm.dataset.recaptchaToken = token;
 }
 
 function onRecaptchaExpired() {
-    reviewForm.dataset.recaptchaToken = '';
+    elements.reviewForm.dataset.recaptchaToken = '';
 }
 
 // Rating state
@@ -57,9 +83,8 @@ function updateRating(type, value) {
 }
 
 // Handle image upload
-imageDropzone.addEventListener('click', () => imageInput.click());
-
-imageInput.addEventListener('change', handleImageUpload);
+const imageDropzone = document.getElementById('imageDropzone');
+imageDropzone.addEventListener('click', () => elements.imageInput.click());
 
 imageDropzone.addEventListener('dragover', (e) => {
     e.preventDefault();
@@ -78,9 +103,8 @@ imageDropzone.addEventListener('drop', (e) => {
 });
 
 // Handle video upload
-videoDropzone.addEventListener('click', () => videoInput.click());
-
-videoInput.addEventListener('change', handleVideoUpload);
+const videoDropzone = document.getElementById('videoDropzone');
+videoDropzone.addEventListener('click', () => elements.videoInput.click());
 
 videoDropzone.addEventListener('dragover', (e) => {
     e.preventDefault();
@@ -102,18 +126,19 @@ videoDropzone.addEventListener('drop', (e) => {
 function handleImageFiles(files) {
     const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
     
-    if (imageFiles.length + imagePreview.children.length > 5) {
+    if (imageFiles.length + elements.imagePreview.children.length > 5) {
         alert('Maximum 5 images allowed');
         return;
     }
 
+    elements.imagePreview.innerHTML = '';
     imageFiles.forEach(file => {
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = document.createElement('img');
             img.src = e.target.result;
             img.dataset.file = file;
-            imagePreview.appendChild(img);
+            elements.imagePreview.appendChild(img);
         };
         reader.readAsDataURL(file);
     });
@@ -136,16 +161,12 @@ function handleVideoFiles(files) {
             return;
         }
         
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            videoPreview.innerHTML = '';
-            const videoElement = document.createElement('video');
-            videoElement.src = e.target.result;
-            videoElement.controls = true;
-            videoElement.dataset.file = videoFile;
-            videoPreview.appendChild(videoElement);
-        };
-        reader.readAsDataURL(videoFile);
+        elements.videoPreview.innerHTML = '';
+        const videoElement = document.createElement('video');
+        videoElement.src = URL.createObjectURL(videoFile);
+        videoElement.controls = true;
+        videoElement.dataset.file = videoFile;
+        elements.videoPreview.appendChild(videoElement);
     };
     video.src = URL.createObjectURL(videoFile);
 }
@@ -159,74 +180,96 @@ function handleVideoUpload(e) {
     handleVideoFiles(e.target.files);
 }
 
-// Handle form submission
-reviewForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const recaptchaToken = reviewForm.dataset.recaptchaToken;
-    if (!recaptchaToken) {
-        alert('Please complete the reCAPTCHA verification');
-        return;
-    }
-
-    // Check if user is logged in
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-        alert('Please login to submit a review');
-        return;
-    }
-
-    // Validate ratings
-    if (!ratings.price || !ratings.quality) {
-        alert('Please provide both price and quality ratings');
-        return;
-    }
-
-    // Get form data
-    const formData = {
-        product_name: document.getElementById('productName').value,
-        product_link: document.getElementById('productLink').value,
-        category: document.getElementById('category').value,
-        shop_provider: document.getElementById('shopProvider').value,
-        rating: (ratings.price + ratings.quality) / 2,
-        description: document.getElementById('description').value,
-        tags: document.getElementById('tags').value.split(',').map(tag => tag.trim()),
-        user_id: user.id,
-        status: 'pending'
-    };
-
-    try {
-        // Upload images
-        const imageFiles = Array.from(imagePreview.children).map(img => img.dataset.file);
-        const imageUrls = await Promise.all(imageFiles.map(file => uploadFile(file, 'images')));
-
-        // Upload video if exists
-        let videoUrl = null;
-        if (videoPreview.children.length > 0) {
-            const videoFile = videoPreview.children[0].dataset.file;
-            videoUrl = await uploadFile(videoFile, 'videos');
+// Initialize the page
+const init = () => {
+    // Check authentication first
+    if (!auth.requireAuth('Please login to submit a review')) {
+        // Hide the form content
+        const container = document.querySelector('.submit-review-container');
+        if (container) {
+            container.style.display = 'none';
         }
+        return;
+    }
 
-        // Save review to database
-        const { data, error } = await supabase
-            .from('reviews')
-            .insert([{
+    // Show the form content
+    const container = document.querySelector('.submit-review-container');
+    if (container) {
+        container.style.display = 'block';
+    }
+
+    // Setup form submission
+    setupForm();
+    
+    // Setup media upload previews
+    setupMediaPreviews();
+};
+
+// Setup form submission
+const setupForm = () => {
+    elements.reviewForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Check authentication again before submission
+        if (!auth.requireAuth()) return;
+
+        try {
+            // Get form data
+            const formData = {
+                productName: elements.productName.value,
+                productLink: elements.productLink.value,
+                category: elements.category.value,
+                shopProvider: elements.shopProvider.value,
+                description: elements.description.value,
+                tags: elements.tags.value.split(',').map(tag => tag.trim()),
+                rating: (ratings.price + ratings.quality) / 2,
+                status: 'pending'
+            };
+
+            // Upload images
+            const imageFiles = Array.from(elements.imagePreview.children).map(img => img.dataset.file);
+            const imageUrls = await Promise.all(imageFiles.map(file => uploadFile(file, 'images')));
+
+            // Upload video if exists
+            let videoUrl = null;
+            if (elements.videoPreview.children.length > 0) {
+                const videoFile = elements.videoPreview.children[0].dataset.file;
+                videoUrl = await uploadFile(videoFile, 'videos');
+            }
+
+            // Save review to database
+            const result = await db.createReview({
                 ...formData,
                 images: imageUrls,
                 video: videoUrl
-            }]);
+            });
+            
+            if (result.success) {
+                // Show success message
+                auth.showNotification('Review submitted successfully!', 'success');
+                // Redirect to reviews page
+                window.location.href = 'reviews.html';
+            } else {
+                throw new Error(result.error || 'Failed to submit review');
+            }
+        } catch (error) {
+            console.error('Error submitting review:', error);
+            auth.showError(error.message || 'Failed to submit review');
+        }
+    });
+};
 
-        if (error) throw error;
+// Setup media upload previews
+const setupMediaPreviews = () => {
+    // Image preview
+    elements.imageInput?.addEventListener('change', handleImageUpload);
 
-        alert('Review submitted successfully! It will be reviewed by an admin.');
-        window.location.href = 'index.html';
-        grecaptcha.reset(submitRecaptchaInstance);
-    } catch (error) {
-        console.error('Error submitting review:', error);
-        alert('Error submitting review. Please try again.');
-        grecaptcha.reset(submitRecaptchaInstance);
-    }
-});
+    // Video preview
+    elements.videoInput?.addEventListener('change', handleVideoUpload);
+};
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', init);
 
 // Upload file to Supabase storage
 async function uploadFile(file, folder) {

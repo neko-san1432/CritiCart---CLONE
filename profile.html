@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - CritiCart</title>
+    <link rel="stylesheet" href="css/components/style.css">
+    <link rel="stylesheet" href="css/pages/profile.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="index.html" class="nav-brand">CritiCart</a>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="reviews.html">Reviews</a>
+            <a href="submit-review.html">Submit Review</a>
+            <button id="darkModeToggle" class="btn dark-mode-btn" aria-label="Toggle dark mode">
+                <i class="fas fa-moon"></i>
+            </button>
+            <div class="auth-buttons"></div>
+        </div>
+    </nav>
+
+    <!-- Profile Section -->
+    <main class="container">
+        <div id="profileContent" style="display: none;">
+            <div class="profile-container">
+                <div class="profile-header">
+                    <div class="profile-avatar">
+                        <img id="avatarPreview" src="assets/icons/default-avatar.png" alt="Profile Avatar">
+                        <label for="avatarUpload" class="avatar-upload-btn">
+                            <i class="fas fa-camera"></i>
+                        </label>
+                        <input type="file" id="avatarUpload" accept="image/*" style="display: none;">
+                    </div>
+                    <div class="profile-info">
+                        <h1 id="profileName">Loading...</h1>
+                        <p id="profileEmail">Loading...</p>
+                    </div>
+                </div>
+
+                <div class="profile-content">
+                    <form id="profileForm" class="profile-form">
+                        <div class="form-group">
+                            <label for="fullName">Full Name</label>
+                            <input type="text" id="fullName" name="fullName" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="username">Username</label>
+                            <input type="text" id="username" name="username" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="bio">Bio</label>
+                            <textarea id="bio" name="bio" rows="4"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="website">Website</label>
+                            <input type="url" id="website" name="website">
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="profile-stats">
+                    <h2>Your Activity</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <i class="fas fa-star"></i>
+                            <h3>Reviews</h3>
+                            <p id="reviewCount">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-comment"></i>
+                            <h3>Comments</h3>
+                            <p id="commentCount">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-thumbs-up"></i>
+                            <h3>Likes</h3>
+                            <p id="likeCount">0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2024 CritiCart. All rights reserved.</p>
+    </footer>
+
+    <!-- Auth Modals -->
+    <div id="authModalsContainer"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/utils/env.js"></script>
+    <script>
+        // Load auth modals
+        fetch('templates/auth-modals.html')
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('authModalsContainer').innerHTML = html;
+            });
+    </script>
+    <script type="module">
+        import { auth } from './js/utils/auth.js';
+        import { profile } from './js/pages/profile.js';
+
+        // Wait for everything to load
+        window.addEventListener('load', async () => {
+            console.log('Window loaded, initializing auth...');
+            try {
+                await auth.init();
+                console.log('Auth initialized, user:', auth.user);
+                await profile.init();
+                console.log('Profile initialized');
+            } catch (error) {
+                console.error('Initialization error:', error);
+            }
+        });
+    </script>
+</body>
+</html> 

@@ -11,24 +11,24 @@ const ENV = {
     },
     production: {
         supabase: {
-            url: process.env.SUPABASE_URL,
-            key: process.env.SUPABASE_ANON_KEY
+            url: window?.ENV?.SUPABASE_URL || 'https://dgualcjfvzjrqzwwmvov.supabase.co',
+            key: window?.ENV?.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRndWFsY2pmdnpqcnF6d3dtdm92Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYwMzAxODIsImV4cCI6MjA2MTYwNjE4Mn0.R-gNusHP_Va683Xf1mhgdUH4NO5udxSkaUtstQwUS_A'
         },
         recaptcha: {
-            siteKey: process.env.RECAPTCHA_SITE_KEY
+            siteKey: window?.ENV?.RECAPTCHA_SITE_KEY || '6Ld36wkrAAAAAPzVNRDG5ghTy_ZhhjyhZJY2lelr'
         }
     }
 };
 
 // Detect environment
 const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const config = ENV[isDevelopment ? 'development' : 'production'];
+const currentConfig = ENV[isDevelopment ? 'development' : 'production'];
 
 // Validate configuration
 const validateConfig = () => {
     const required = ['supabase.url', 'supabase.key', 'recaptcha.siteKey'];
     const missing = required.filter(key => {
-        const value = key.split('.').reduce((obj, k) => obj?.[k], config);
+        const value = key.split('.').reduce((obj, k) => obj?.[k], currentConfig);
         return !value;
     });
 
@@ -39,9 +39,8 @@ const validateConfig = () => {
     return true;
 };
 
-// Export validated configuration
-export default Object.freeze({
-    ...config,
-    isDevelopment,
+// Export configuration
+export const config = {
+    ...currentConfig,
     validate: validateConfig
-}); 
+}; 

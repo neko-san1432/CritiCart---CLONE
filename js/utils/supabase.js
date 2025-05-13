@@ -1,24 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
-import config from './config.js';
+import { config } from './config.js';
 
-// Validate configuration before initializing
-if (!config.validate()) {
-    throw new Error('Invalid Supabase configuration');
-}
-
-// Initialize Supabase client with custom options
-const supabase = createClient(config.supabase.url, config.supabase.key, {
-    auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true
-    },
-    global: {
-        headers: {
-            'x-application-name': 'criticart'
-        }
-    }
-});
+// Initialize Supabase client
+const supabase = window.supabase.createClient(config.supabase.url, config.supabase.key);
 
 // Cache implementation
 const cache = new Map();
@@ -51,15 +34,91 @@ class DatabaseError extends Error {
 
 const handleError = (error) => {
     console.error('Database error:', error);
-    throw new DatabaseError(
-        error.message || 'An unexpected error occurred',
-        error.code || 'UNKNOWN_ERROR',
-        error.details || {}
-    );
+    
+    // Define common error messages
+    const errorMessages = {
+        'PGRST116': 'Resource not found',
+        '23505': 'This record already exists',
+        '23503': 'Referenced record does not exist',
+        '42P01': 'Database table not found',
+        '42703': 'Column does not exist',
+        '23502': 'Required field is missing',
+        'PGRST301': 'Row level security violation',
+        'AUTH001': 'Authentication required',
+        'AUTH002': 'Invalid credentials',
+        'AUTH003': 'Email not confirmed',
+        'AUTH004': 'Invalid token',
+        'STORAGE001': 'File upload failed',
+        'STORAGE002': 'File not found',
+        'NETWORK': 'Network connection error'
+    };
+
+    // Get user-friendly error message
+    let userMessage = 'An unexpected error occurred';
+    let errorTitle = 'Error';
+
+    if (error.code) {
+        userMessage = errorMessages[error.code] || error.message || userMessage;
+        errorTitle = `Error (${error.code})`;
+    } else if (error.message && error.message.includes('network')) {
+        userMessage = errorMessages.NETWORK;
+        errorTitle = 'Network Error';
+    }
+
+    // Show error modal to user
+    if (typeof window !== 'undefined' && window.auth) {
+        window.auth.showError(userMessage, errorTitle);
+    }
+
+    // Return a generic error object without sensitive details
+    return {
+        success: false,
+        error: userMessage
+    };
 };
 
 // Database utility functions
 const db = {
+    // Products
+    async getProducts(filters = {}, page = 1, limit = 12) {
+        const cacheKey = `products:${JSON.stringify(filters)}:${page}:${limit}`;
+        const cached = getCachedData(cacheKey);
+        if (cached) return cached;
+
+        try {
+            let query = supabase
+                .from('products')
+                .select('*', { count: 'exact' })
+                .order('name');
+
+            // Apply filters
+            if (filters.category) {
+                query = query.eq('category', filters.category);
+            }
+            if (filters.minRating) {
+                query = query.gte('average_rating', filters.minRating);
+            }
+            if (filters.search) {
+                query = query.ilike('name', `%${filters.search}%`);
+            }
+
+            // Apply pagination
+            const start = (page - 1) * limit;
+            const end = start + limit - 1;
+            query = query.range(start, end);
+
+            const { data, error, count } = await query;
+            if (error) throw error;
+
+            const result = { products: data, total: count };
+            setCachedData(cacheKey, result);
+            return { success: true, data: result };
+        } catch (error) {
+            console.error('Error fetching products:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
     // Reviews
     async getReviews(filters = {}, page = 1, limit = 12) {
         const cacheKey = `reviews:${JSON.stringify(filters)}:${page}:${limit}`;
@@ -92,9 +151,10 @@ const db = {
 
             const result = { reviews: data, total: count };
             setCachedData(cacheKey, result);
-            return result;
+            return { success: true, data: result };
         } catch (error) {
-            return handleError(error);
+            console.error('Error fetching reviews:', error);
+            return { success: false, error: error.message };
         }
     },
 
@@ -112,9 +172,10 @@ const db = {
 
             if (error) throw error;
             setCachedData(cacheKey, data);
-            return data;
+            return { success: true, data };
         } catch (error) {
-            return handleError(error);
+            console.error('Error fetching review:', error);
+            return { success: false, error: error.message };
         }
     },
 
@@ -280,12 +341,96 @@ const db = {
         return data;
     },
 
+    // Get reviews for a specific product
+    async getProductReviews(productId) {
+        try {
+            const { data, error } = await supabase
+                .from('reviews')
+                .select(`
+                    *,
+                    author:profiles (
+                        full_name,
+                        avatar_url
+                    )
+                `)
+                .eq('product_id', productId)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            // Format the reviews data
+            return data.map(review => ({
+                id: review.id,
+                rating: review.rating,
+                comment: review.comment,
+                created_at: review.created_at,
+                author_name: review.author?.full_name || 'Anonymous',
+                author_avatar: review.author?.avatar_url
+            }));
+        } catch (error) {
+            console.error('Error fetching reviews:', error);
+            return [];
+        }
+    },
+
     // Helper functions
     async handleError(error) {
         console.error('Database error:', error);
         throw new Error(error.message);
+    },
+
+    async getProductDetails(productId) {
+        try {
+            // Get product details and reviews in parallel
+            const [productResult, reviewsResult] = await Promise.all([
+                supabase
+                    .from('products')
+                    .select('*')
+                    .eq('id', productId)
+                    .single(),
+                supabase
+                    .from('reviews')
+                    .select(`
+                        *,
+                        author:profiles (
+                            full_name,
+                            avatar_url
+                        )
+                    `)
+                    .eq('product_id', productId)
+                    .order('created_at', { ascending: false })
+            ]);
+
+            if (productResult.error) throw productResult.error;
+            if (reviewsResult.error) throw reviewsResult.error;
+
+            // Format reviews data
+            const reviews = reviewsResult.data.map(review => ({
+                id: review.id,
+                rating: review.rating,
+                comment: review.comment,
+                created_at: review.created_at,
+                author_name: review.author?.full_name || 'Anonymous',
+                author_avatar: review.author?.avatar_url
+            }));
+
+            // Combine product and reviews data
+            return {
+                success: true,
+                data: {
+                    ...productResult.data,
+                    reviews
+                }
+            };
+        } catch (error) {
+            console.error('Error fetching product details:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
     }
 };
 
 // Export utilities
-export { db, supabase, DatabaseError }; 
+export { supabase, db, DatabaseError }; 
